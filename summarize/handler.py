@@ -1,11 +1,14 @@
-import json
 import os
-import openai  # or google.generativeai for Gemini
+import json
+import google.generativeai as genai
 
-# Set your OpenAI API key via Lambda env variable or Secrets Manager
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Get API key from environment variable
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# 📌 Summarize one article using OpenAI
+# Configure Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("models/gemini-1.5-flash")
+
 def summarize_article(title, link, snippet):
     prompt = (
         f"Summarize this tech article in 2–3 concise bullets.\n\n"
@@ -13,28 +16,22 @@ def summarize_article(title, link, snippet):
         f"Snippet: {snippet}\n\n"
         f"Format: - Bullet 1\n- Bullet 2\n- Bullet 3 (if needed)"
     )
-    
+
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",  # or gpt-3.5-turbo
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
-        )
-        summary = response['choices'][0]['message']['content']
+        response = model.generate_content(prompt)
         return {
             "title": title,
             "link": link,
-            "summary": summary
+            "summary": response.text
         }
     except Exception as e:
         return {
             "title": title,
             "link": link,
-            "summary": f"❌ Error generating summary: {str(e)}"
+            "summary": f"❌ Error: {str(e)}"
         }
 
 def lambda_handler(event, context):
-    # event['body'] is a JSON string if called from API Gateway
     if isinstance(event.get("body"), str):
         articles = json.loads(event["body"])
     else:
@@ -46,4 +43,3 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps(summarized, indent=2)
     }
-
