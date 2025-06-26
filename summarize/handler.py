@@ -1,13 +1,11 @@
 import os
 import json
-import google.generativeai as genai
+import openai
 
-# Get API key from environment variable
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Get API key securely
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("models/gemini-1.5-flash")
+MODEL = "gpt-4.1-mini"
 
 def summarize_article(title, link, snippet):
     prompt = (
@@ -18,11 +16,15 @@ def summarize_article(title, link, snippet):
     )
 
     try:
-        response = model.generate_content(prompt)
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
         return {
             "title": title,
             "link": link,
-            "summary": response.text
+            "summary": response.choices[0].message.content.strip()
         }
     except Exception as e:
         return {
